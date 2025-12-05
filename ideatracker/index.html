@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多想法追蹤器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .add-idea-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-radius: 15px;
+            border: 2px dashed #667eea;
+        }
+
+        .add-idea-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"], textarea {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .add-btn {
+            padding: 15px 40px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .add-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .ideas-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .idea-card {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .idea-card:hover {
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .idea-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .idea-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            flex: 1;
+        }
+
+        .idea-meta {
+            display: flex;
+            gap: 15px;
+            color: #718096;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .idea-content {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .idea-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-edit {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #38a169;
+            transform: translateY(-1px);
+        }
+
+        .btn-history {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-history:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #e53e3e;
+            transform: translateY(-1px);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #667eea;
+            color: white;
+        }
+
+        /* 模態視窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .modal-title {
+            font-size: 1.8em;
+            color: #333;
+        }
+
+        .close-btn {
+            background: #e2e8f0;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: #cbd5e0;
+            transform: rotate(90deg);
+        }
+
+        .edit-form {
+            margin-bottom: 20px;
+        }
+
+        .edit-form textarea {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .save-btn {
+            padding: 15px 40px;
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .save-btn:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        /* 歷程記錄樣式 */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .version-card {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .version-card:last-child {
+            border-left-color: #48bb78;
+        }
+
+        .version-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .version-number {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .version-time {
+            color: #000;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .version-content {
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .diff-section {
+            margin-top: 10px;
+            padding: 12px;
+            background: #fff5f5;
+            border-radius: 6px;
+            border-left: 3px solid #fc8181;
+        }
+
+        .diff-title {
+            font-weight: 600;
+            color: #c53030;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .diff-content {
+            font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .added {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .removed {
+            background: #fed7d7;
+            color: #742a2a;
+            text-decoration: line-through;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state-text {
+            font-size: 1.2em;
+            font-style: italic;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #edf2f7;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💡 多想法追蹤器</h1>
+        
+        <div class="add-idea-section">
+            <h2>➕ 新增想法</h2>
+            <div class="input-group">
+                <input type="text" id="ideaTitleInput" placeholder="想法標題...">
+            </div>
+            <div class="input-group">
+                <textarea id="ideaContentInput" placeholder="想法內容..."></textarea>
+                <button class="add-btn" onclick="addIdea()">新增</button>
+            </div>
+        </div>
+
+        <div id="ideasList" class="ideas-list"></div>
+    </div>
+
+    <!-- 編輯模態視窗 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">✏️ 編輯想法</div>
+                <button class="close-btn" onclick="closeEditModal()">×</button>
+            </div>
+            <div class="edit-form">
+                <input type="text" id="editTitleInput" placeholder="想法標題">
+                <textarea id="editContentInput" placeholder="想法內容" rows="6"></textarea>
+                <button class="save-btn" onclick="saveEdit()">💾 儲存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 歷程模態視窗 -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📜 想法歷程</div>
+                <button class="close-btn" onclick="closeHistoryModal()">×</button>
+            </div>
+            <div class="stats-bar" id="historyStats"></div>
+            <div id="historyContent" class="history-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let ideas = [];
+        let currentEditingId = null;
+        let currentHistoryId = null;
+
+        // 載入資料
+        function loadData() {
+            const saved = localStorage.getItem('multiIdeas');
+            if (saved) {
+                ideas = JSON.parse(saved);
+                renderIdeas();
+            }
+        }
+
+        // 儲存資料
+        function saveData() {
+            localStorage.setItem('multiIdeas', JSON.stringify(ideas));
+        }
+
+        // 新增想法
+        function addIdea() {
+            const title = document.getElementById('ideaTitleInput').value.trim();
+            const content = document.getElementById('ideaContentInput').value.trim();
+            
+            if (!title) {
+                alert('請輸入標題！');
+                return;
+            }
+            
+            if (!content) {
+                alert('請輸入內容！');
+                return;
+            }
+
+            const now = new Date();
+            const idea = {
+                id: Date.now(),
+                title: title,
+                versions: [{
+                    id: Date.now(),
+                    content: content,
+                    timestamp: now.toISOString(),
+                    displayTime: formatDateTime(now)
+                }],
+                createdAt: now.toISOString(),
+                updatedAt: now.toISOString()
+            };
+
+            ideas.unshift(idea);
+            saveData();
+            renderIdeas();
+            
+            // 清空輸入
+            document.getElementById('ideaTitleInput').value = '';
+            document.getElementById('ideaContentInput').value = '';
+            
+            alert('✅ 想法已新增！');
+        }
+
+        // 格式化時間
+        function formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // 渲染想法列表
+        function renderIdeas() {
+            const container = document.getElementById('ideasList');
+            
+            if (ideas.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💭</div>
+                        <div class="empty-state-text">還沒有任何想法，開始新增第一個吧！</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            ideas.forEach(idea => {
+                const latestVersion = idea.versions[idea.versions.length - 1];
+                const versionCount = idea.versions.length;
+                const createdDate = new Date(idea.createdAt);
+                const updatedDate = new Date(idea.updatedAt);
+                
+                html += `
+                    <div class="idea-card">
+                        <div class="idea-header">
+                            <div class="idea-title">${escapeHtml(idea.title)}</div>
+                            <span class="badge">${versionCount} 個版本</span>
+                        </div>
+                        <div class="idea-meta">
+                            <span>📅 創建：${formatDateTime(createdDate)}</span>
+                            <span>🔄 更新：${formatDateTime(updatedDate)}</span>
+                        </div>
+                        <div class="idea-content">${escapeHtml(latestVersion.content)}</div>
+                        <div class="idea-actions">
+                            <button class="btn btn-edit" onclick="openEditModal(${idea.id})">✏️ 修改想法</button>
+                            <button class="btn btn-history" onclick="openHistoryModal(${idea.id})">📜 想法歷程</button>
+                            <button class="btn btn-delete" onclick="deleteIdea(${idea.id})">🗑️ 刪除</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // 開啟編輯視窗
+        function openEditModal(ideaId) {
+            const idea = ideas.find(i => i.id === ideaId);
+            if (!idea) return;
+            
+            currentEditingId = ideaId;
+            const latestVersion = idea.versions[idea.versions.length - 1];
+            
+            document.getElementById('editTitleInput').value = idea.title;
+            document.getElementById('editContentInput').value = latestVersion.content;
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        // 關閉編輯視窗
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+            currentEditingId = null;
+        }
+
+        // 儲存編輯
+        function saveEdit() {
+            const title = document.getElementById('editTitleInput').value.trim();
+            const content = document.getElementById('editContentInput').value.trim();
+            
+            if (!title || !content) {
+                alert('標題和內容都不能為空！');
+                return;
+            }
+
+            const idea = ideas.find(i => i.id === currentEditingId);
+            if (!idea) return;
+
+            const now = new Date();
+            
+            // 更新標題
+            idea.title = title;
+            
+            // 新增版本
+            idea.versions.push({
+                id: Date.now(),
+                content: content,
+                timestamp: now.toISOString(),
+                displayTime: formatDateTime(now)
+            });
+            
+            idea.updatedAt = now.toISOString();
+            
+            saveData();
+            renderIdeas();
+            closeEditModal();
+            
+            alert('✅ 修改已儲存！');
+        }
+
+        // 開啟歷程視窗
+        function openHistoryModal(ideaId) {
+            const idea = ideas.find(i => i.id === ideaId);
+            if (!idea) return;
+            
+            currentHistoryId = ideaId;
+            renderHistory(idea);
+            document.getElementById('historyModal').classList.add('show');
+        }
+
+        // 關閉歷程視窗
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.remove('show');
+            currentHistoryId = null;
+        }
+
+        // 渲染歷程
+        function renderHistory(idea) {
+            const statsContainer = document.getElementById('historyStats');
+            const container = document.getElementById('historyContent');
+            
+            const versions = idea.versions;
+            const totalVersions = versions.length;
+            const firstDate = new Date(versions[0].timestamp);
+            const lastDate = new Date(versions[versions.length - 1].timestamp);
+            const daysDiff = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+            
+            statsContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${totalVersions}</div>
+                    <div class="stat-label">總版本數</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${daysDiff}</div>
+                    <div class="stat-label">追蹤天數</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${versions[versions.length - 1].content.length}</div>
+                    <div class="stat-label">當前字數</div>
+                </div>
+            `;
+
+            let html = '';
+            // 從最舊到最新順序顯示
+            for (let i = 0; i < versions.length; i++) {
+                const version = versions[i];
+                const isLatest = i === versions.length - 1;
+                const previousVersion = i > 0 ? versions[i - 1] : null;
+                
+                html += `
+                    <div class="version-card">
+                        <div class="version-header">
+                            <span class="version-number">
+                                版本 ${i + 1}
+                                ${isLatest ? '<span class="badge">最新</span>' : ''}
+                            </span>
+                            <span class="version-time">⏰ ${version.displayTime}</span>
+                        </div>
+                        <div class="version-content">${escapeHtml(version.content)}</div>
+                `;
+                
+                if (previousVersion) {
+                    const diff = getDiff(previousVersion.content, version.content);
+                    if (diff) {
+                        html += `
+                            <div class="diff-section">
+                                <div class="diff-title">🔄 與版本 ${i} 的差異：</div>
+                                <div class="diff-content">${diff}</div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                html += `</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // 計算差異
+        function getDiff(oldText, newText) {
+            if (!oldText) return null;
+
+            const oldChars = oldText.split('');
+            const newChars = newText.split('');
+            
+            let diffHtml = '';
+            let i = 0, j = 0;
+            
+            while (i < oldChars.length || j < newChars.length) {
+                if (i >= oldChars.length) {
+                    diffHtml += `<span class="added">${escapeHtml(newChars[j])}</span>`;
+                    j++;
+                } else if (j >= newChars.length) {
+                    diffHtml += `<span class="removed">${escapeHtml(oldChars[i])}</span>`;
+                    i++;
+                } else if (oldChars[i] === newChars[j]) {
+                    diffHtml += escapeHtml(newChars[j]);
+                    i++;
+                    j++;
+                } else {
+                    let found = false;
+                    for (let k = 1; k <= 5 && j + k < newChars.length; k++) {
+                        if (oldChars[i] === newChars[j + k]) {
+                            for (let l = 0; l < k; l++) {
+                                diffHtml += `<span class="added">${escapeHtml(newChars[j + l])}</span>`;
+                            }
+                            j += k;
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        for (let k = 1; k <= 5 && i + k < oldChars.length; k++) {
+                            if (oldChars[i + k] === newChars[j]) {
+                                for (let l = 0; l < k; l++) {
+                                    diffHtml += `<span class="removed">${escapeHtml(oldChars[i + l])}</span>`;
+                                }
+                                i += k;
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!found) {
+                        diffHtml += `<span class="removed">${escapeHtml(oldChars[i])}</span>`;
+                        diffHtml += `<span class="added">${escapeHtml(newChars[j])}</span>`;
+                        i++;
+                        j++;
+                    }
+                }
+            }
+            
+            return diffHtml;
+        }
+
+        // 刪除想法
+        function deleteIdea(ideaId) {
+            const idea = ideas.find(i => i.id === ideaId);
+            if (!idea) return;
+            
+            if (confirm(`確定要刪除「${idea.title}」嗎？此操作無法復原！`)) {
+                ideas = ideas.filter(i => i.id !== ideaId);
+                saveData();
+                renderIdeas();
+                alert('✅ 已刪除！');
+            }
+        }
+
+        // 跳脫 HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 點擊模態視窗外部關閉
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
+
+        document.getElementById('historyModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHistoryModal();
+            }
+        });
+
+        // 頁面載入時初始化
+        window.onload = function() {
+            loadData();
+            
+            // Enter 鍵新增（在內容框按 Ctrl+Enter）
+            document.getElementById('ideaContentInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    addIdea();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
