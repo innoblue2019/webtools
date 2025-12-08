@@ -1,1 +1,1123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浮動 Todo List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        /* 浮動新增按鈕 */
+        .floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            z-index: 1000;
+            border: none;
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .floating-btn::before {
+            content: '+';
+            font-size: 32px;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Done 按鈕 */
+        .done-btn {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            z-index: 1000;
+            border: none;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .done-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 清除按鈕 */
+        .clear-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #757575 0%, #9e9e9e 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            z-index: 1000;
+            border: none;
+            color: white;
+            font-size: 24px;
+        }
+
+        .clear-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+        }
+
+        /* 底部狀態列 */
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 25px;
+            border-radius: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 900;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            font-size: 14px;
+            color: #333;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .status-item .icon {
+            font-size: 16px;
+        }
+
+        .status-item .count {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .status-item.warning .count {
+            color: #f44336;
+        }
+
+        .status-divider {
+            width: 1px;
+            height: 20px;
+            background: #ddd;
+        }
+
+        /* Todo 卡片 */
+        .todo-card {
+            position: absolute;
+            width: 250px;
+            min-height: 100px;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            cursor: move;
+            transition: transform 0.2s ease;
+        }
+
+        /* 即將到期的卡片閃爍效果 */
+        .todo-card.warning {
+            animation: warningBlink 1s ease-in-out infinite;
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes warningBlink {
+            0%, 100% {
+                box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.8), 0 4px 10px rgba(0, 0, 0, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        /* 過期的卡片樣式 */
+        .todo-card.overdue {
+            opacity: 0.6;
+            filter: grayscale(50%);
+            border: 2px solid #999;
+        }
+
+        .todo-card.overdue .title {
+            text-decoration: line-through;
+            color: #666;
+        }
+
+        .todo-card.overdue .deadline {
+            color: #999;
+            font-weight: bold;
+        }
+
+        .todo-card.overdue::after {
+            content: '已過期';
+            position: absolute;
+            top: 10px;
+            right: 35px;
+            background: #999;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .todo-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .todo-card .number {
+            font-size: 12px;
+            color: #000;
+            opacity: 0.6;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .todo-card .title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+
+        .todo-card .timestamp {
+            font-size: 11px;
+            color: #000;
+            text-align: right;
+            opacity: 0.7;
+        }
+
+        .todo-card .deadline {
+            font-size: 11px;
+            color: #d32f2f;
+            margin-top: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .todo-card .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .todo-card:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        /* 新增 Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .optional-label {
+            color: #999;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel {
+            background: #ddd;
+            color: #333;
+        }
+
+        .btn-cancel:hover {
+            background: #ccc;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Done List Modal */
+        .done-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .done-modal.active {
+            display: flex;
+        }
+
+        .done-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .done-modal-content h2 {
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .done-list {
+            list-style: none;
+        }
+
+        .done-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 4px solid #56ab2f;
+        }
+
+        .done-item .item-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .done-item .item-times {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .done-item .item-times span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        .close-done-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .close-done-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(86, 171, 47, 0.4);
+        }
+
+        /* 確認清除 Modal */
+        .confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .confirm-modal.active {
+            display: flex;
+        }
+
+        .confirm-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .confirm-modal-content h2 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 20px;
+        }
+
+        .confirm-modal-content p {
+            margin-bottom: 25px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .confirm-buttons button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .btn-confirm-cancel {
+            background: #ddd;
+            color: #333;
+        }
+
+        .btn-confirm-cancel:hover {
+            background: #ccc;
+        }
+
+        .btn-confirm-clear {
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+            color: white;
+        }
+
+        .btn-confirm-clear:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(244, 67, 54, 0.4);
+        }
+
+        /* 刪除動畫 */
+        @keyframes fadeOutScale {
+            0% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.5) translateY(-20px);
+            }
+        }
+
+        .todo-card.removing {
+            animation: fadeOutScale 0.5s ease forwards;
+        }
+
+        /* 恭喜訊息 */
+        .congratulation-msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 40px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 3000;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes congratsAnimation {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            10% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            20% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+        }
+
+        .congratulation-msg.show {
+            animation: congratsAnimation 2s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- 浮動新增按鈕 -->
+    <button class="floating-btn" id="addBtn"></button>
+
+    <!-- Done 按鈕 -->
+    <button class="done-btn" id="doneBtn">Done</button>
+
+    <!-- 清除按鈕 -->
+    <button class="clear-btn" id="clearBtn">🗑️</button>
+
+    <!-- 底部狀態列 -->
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="icon">📝</span>
+            <span>待辦事項：<span class="count" id="todoCount">0</span></span>
+        </div>
+        <div class="status-divider"></div>
+        <div class="status-item warning">
+            <span class="icon">⚠️</span>
+            <span>警示中：<span class="count" id="warningCount">0</span></span>
+        </div>
+        <div class="status-divider"></div>
+        <div class="status-item" style="color: #999;">
+            <span class="icon">⏰</span>
+            <span>已過期：<span class="count" id="overdueCount" style="color: #999;">0</span></span>
+        </div>
+    </div>
+
+    <!-- 恭喜訊息 -->
+    <div class="congratulation-msg" id="congratsMsg">🎉 恭喜你完成了！</div>
+
+    <!-- 新增 Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2>新增待辦事項</h2>
+            <div class="form-group">
+                <label for="todoInput">標題 *</label>
+                <input type="text" id="todoInput" placeholder="輸入標題..." autofocus>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="deadlineDate">完成日期 <span class="optional-label">(選填)</span></label>
+                    <input type="date" id="deadlineDate">
+                </div>
+                <div class="form-group">
+                    <label for="deadlineTime">時間 <span class="optional-label">(選填)</span></label>
+                    <input type="time" id="deadlineTime">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="warningMinutes">提前警示 <span class="optional-label">(選填，單位：分鐘)</span></label>
+                <input type="number" id="warningMinutes" placeholder="例：10" min="1">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" id="cancelBtn">取消</button>
+                <button class="btn-submit" id="submitBtn">新增</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Done List Modal -->
+    <div class="done-modal" id="doneModal">
+        <div class="done-modal-content">
+            <h2>✅ 已完成的待辦事項</h2>
+            <ul class="done-list" id="doneList"></ul>
+            <button class="close-done-btn" id="closeDoneBtn">關閉</button>
+        </div>
+    </div>
+
+    <!-- 確認清除 Modal -->
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-modal-content">
+            <h2>⚠️ 確認清除所有資料</h2>
+            <p>此操作將會刪除所有待辦事項和已完成紀錄，<br>此動作無法復原，確定要繼續嗎？</p>
+            <div class="confirm-buttons">
+                <button class="btn-confirm-cancel" id="confirmCancelBtn">取消</button>
+                <button class="btn-confirm-clear" id="confirmClearBtn">確定清除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 隨機顏色生成器
+        function getRandomColor() {
+            const colors = [
+                '#FFB6C1', '#FFD700', '#98FB98', '#87CEEB', '#DDA0DD',
+                '#F0E68C', '#FFE4B5', '#B0E0E6', '#FFA07A', '#E6E6FA',
+                '#FFDAB9', '#F5DEB3', '#D8BFD8', '#AFEEEE', '#FFE4E1'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // 獲取隨機位置
+        function getRandomPosition() {
+            const maxX = window.innerWidth - 270; // 250px width + padding
+            const maxY = window.innerHeight - 150; // approximate height
+            
+            return {
+                x: Math.max(20, Math.floor(Math.random() * maxX)),
+                y: Math.max(20, Math.floor(Math.random() * maxY))
+            };
+        }
+
+        // 格式化時間
+        function formatTime(date) {
+            return date.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // 載入 todos
+        function loadTodos() {
+            const todos = JSON.parse(localStorage.getItem('todos') || '[]');
+            todos.forEach(todo => createTodoCard(todo, false));
+            // 載入後立即檢查一次警示
+            checkWarnings();
+        }
+
+        // 檢查所有卡片的警示狀態
+        function checkWarnings() {
+            const now = new Date();
+            let warningCount = 0;
+            let todoCount = 0;
+            let overdueCount = 0;
+            
+            document.querySelectorAll('.todo-card').forEach(card => {
+                todoCount++;
+                
+                if (card.dataset.deadline) {
+                    const deadline = new Date(card.dataset.deadline);
+                    const warningMinutes = parseInt(card.dataset.warningMinutes) || 0;
+                    const warningTime = new Date(deadline.getTime() - warningMinutes * 60 * 1000);
+                    
+                    // 檢查是否已過期
+                    if (now >= deadline) {
+                        card.classList.add('overdue');
+                        card.classList.remove('warning');
+                        overdueCount++;
+                    }
+                    // 檢查是否在警示時間內
+                    else if (now >= warningTime && now < deadline) {
+                        card.classList.add('warning');
+                        card.classList.remove('overdue');
+                        warningCount++;
+                    }
+                    // 都不是，移除所有樣式
+                    else {
+                        card.classList.remove('warning');
+                        card.classList.remove('overdue');
+                    }
+                }
+            });
+            
+            // 更新狀態列
+            updateStatusBar(todoCount, warningCount, overdueCount);
+        }
+
+        // 更新狀態列顯示
+        function updateStatusBar(todoCount, warningCount, overdueCount) {
+            document.getElementById('todoCount').textContent = todoCount;
+            document.getElementById('warningCount').textContent = warningCount;
+            document.getElementById('overdueCount').textContent = overdueCount;
+        }
+
+        // 每 10 秒檢查一次警示狀態
+        setInterval(checkWarnings, 10000);
+
+        // 載入已完成的 todos
+        function loadCompletedTodos() {
+            return JSON.parse(localStorage.getItem('completedTodos') || '[]');
+        }
+
+        // 儲存已完成的 todo
+        function saveCompletedTodo(todo) {
+            const completed = loadCompletedTodos();
+            completed.push({
+                ...todo,
+                completedAt: new Date().toISOString()
+            });
+            localStorage.setItem('completedTodos', JSON.stringify(completed));
+        }
+
+        // 儲存 todos
+        function saveTodos() {
+            const todos = Array.from(document.querySelectorAll('.todo-card')).map(card => ({
+                id: card.dataset.id,
+                number: parseInt(card.dataset.number),
+                title: card.querySelector('.title').textContent,
+                timestamp: card.dataset.timestamp,
+                deadline: card.dataset.deadline || null,
+                warningMinutes: parseInt(card.dataset.warningMinutes) || 0,
+                color: card.style.backgroundColor,
+                x: parseInt(card.style.left),
+                y: parseInt(card.style.top),
+                zIndex: parseInt(card.style.zIndex) || 1
+            }));
+            localStorage.setItem('todos', JSON.stringify(todos));
+        }
+
+        // 建立 Todo 卡片
+        function createTodoCard(todo, isNew = true) {
+            const card = document.createElement('div');
+            card.className = 'todo-card';
+            card.dataset.id = todo.id || Date.now();
+            card.dataset.timestamp = todo.timestamp || new Date().toISOString();
+            
+            // 儲存截止時間和警示分鐘數
+            if (todo.deadline) {
+                card.dataset.deadline = todo.deadline;
+                card.dataset.warningMinutes = todo.warningMinutes || 0;
+            }
+            
+            // 計算序號：如果是新的，則為當前最大序號+1；否則使用儲存的序號
+            if (isNew) {
+                const existingCards = document.querySelectorAll('.todo-card');
+                const maxNumber = existingCards.length > 0 
+                    ? Math.max(...Array.from(existingCards).map(c => parseInt(c.dataset.number) || 0))
+                    : 0;
+                card.dataset.number = maxNumber + 1;
+            } else {
+                card.dataset.number = todo.number || 1;
+            }
+            
+            const color = todo.color || getRandomColor();
+            card.style.backgroundColor = color;
+            
+            // 設定 z-index
+            card.style.zIndex = todo.zIndex || 1;
+            
+            if (isNew) {
+                const pos = getRandomPosition();
+                card.style.left = pos.x + 'px';
+                card.style.top = pos.y + 'px';
+            } else {
+                card.style.left = todo.x + 'px';
+                card.style.top = todo.y + 'px';
+            }
+            
+            // 建立截止時間顯示
+            let deadlineHTML = '';
+            if (todo.deadline) {
+                const deadlineDate = new Date(todo.deadline);
+                const deadlineStr = deadlineDate.toLocaleString('zh-TW', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                deadlineHTML = `<div class="deadline">⏰ 截止：${deadlineStr}</div>`;
+            }
+            
+            card.innerHTML = `
+                <button class="delete-btn">×</button>
+                <div class="number">第 ${card.dataset.number} 個 todo</div>
+                <div class="title">${todo.title}</div>
+                <div class="timestamp">${formatTime(new Date(card.dataset.timestamp))}</div>
+                ${deadlineHTML}
+            `;
+            
+            // 刪除功能
+            card.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // 儲存到已完成列表
+                const completedTodo = {
+                    number: card.dataset.number,
+                    title: card.querySelector('.title').textContent,
+                    createdAt: card.dataset.timestamp
+                };
+                saveCompletedTodo(completedTodo);
+                
+                // 添加移除動畫
+                card.classList.add('removing');
+                
+                // 顯示恭喜訊息
+                const congratsMsg = document.getElementById('congratsMsg');
+                congratsMsg.classList.add('show');
+                
+                // 0.5秒後移除卡片（動畫結束）
+                setTimeout(() => {
+                    card.remove();
+                    saveTodos();
+                    checkWarnings(); // 更新狀態列
+                }, 500);
+                
+                // 2秒後移除恭喜訊息的 show class
+                setTimeout(() => {
+                    congratsMsg.classList.remove('show');
+                }, 2000);
+            });
+            
+            // 拖曳功能
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            
+            card.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('delete-btn')) return;
+                isDragging = true;
+                initialX = e.clientX - parseInt(card.style.left);
+                initialY = e.clientY - parseInt(card.style.top);
+                // 移除 z-index 變更，保持原有排序
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    card.style.left = currentX + 'px';
+                    card.style.top = currentY + 'px';
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    saveTodos();
+                }
+            });
+            
+            document.body.appendChild(card);
+            
+            if (isNew) {
+                saveTodos();
+            }
+        }
+
+        // Modal 控制
+        const modal = document.getElementById('modal');
+        const addBtn = document.getElementById('addBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const todoInput = document.getElementById('todoInput');
+
+        // Done Modal 控制
+        const doneModal = document.getElementById('doneModal');
+        const doneBtn = document.getElementById('doneBtn');
+        const closeDoneBtn = document.getElementById('closeDoneBtn');
+        const doneList = document.getElementById('doneList');
+
+        // 確認清除 Modal 控制
+        const confirmModal = document.getElementById('confirmModal');
+        const clearBtn = document.getElementById('clearBtn');
+        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+        const confirmClearBtn = document.getElementById('confirmClearBtn');
+
+        // 清除所有資料
+        clearBtn.addEventListener('click', () => {
+            confirmModal.classList.add('active');
+        });
+
+        confirmCancelBtn.addEventListener('click', () => {
+            confirmModal.classList.remove('active');
+        });
+
+        confirmClearBtn.addEventListener('click', () => {
+            // 清除 localStorage
+            localStorage.removeItem('todos');
+            localStorage.removeItem('completedTodos');
+            
+            // 移除頁面上所有的卡片
+            document.querySelectorAll('.todo-card').forEach(card => card.remove());
+            
+            // 關閉 Modal
+            confirmModal.classList.remove('active');
+            
+            // 如果 Done Modal 有開啟，也一起關閉並清空列表
+            if (doneModal.classList.contains('active')) {
+                doneModal.classList.remove('active');
+            }
+            
+            // 更新狀態列
+            updateStatusBar(0, 0, 0);
+        });
+
+        // 點擊確認 modal 背景關閉
+        confirmModal.addEventListener('click', (e) => {
+            if (e.target === confirmModal) {
+                confirmCancelBtn.click();
+            }
+        });
+
+        // 顯示已完成列表
+        function displayCompletedTodos() {
+            const completed = loadCompletedTodos();
+            doneList.innerHTML = '';
+            
+            if (completed.length === 0) {
+                doneList.innerHTML = '<div class="empty-message">還沒有完成的待辦事項</div>';
+                return;
+            }
+            
+            // 反轉陣列，最新完成的在最上面
+            completed.reverse().forEach(todo => {
+                const li = document.createElement('li');
+                li.className = 'done-item';
+                
+                const createdTime = formatTime(new Date(todo.createdAt));
+                const completedTime = formatTime(new Date(todo.completedAt));
+                
+                li.innerHTML = `
+                    <div class="item-title">第 ${todo.number} 個 - ${todo.title}</div>
+                    <div class="item-times">
+                        <span>📝 建立時間: ${createdTime}</span>
+                        <span>✅ 完成時間: ${completedTime}</span>
+                    </div>
+                `;
+                
+                doneList.appendChild(li);
+            });
+        }
+
+        doneBtn.addEventListener('click', () => {
+            displayCompletedTodos();
+            doneModal.classList.add('active');
+        });
+
+        closeDoneBtn.addEventListener('click', () => {
+            doneModal.classList.remove('active');
+        });
+
+        // 點擊 done modal 背景關閉
+        doneModal.addEventListener('click', (e) => {
+            if (e.target === doneModal) {
+                closeDoneBtn.click();
+            }
+        });
+
+        addBtn.addEventListener('click', () => {
+            modal.classList.add('active');
+            todoInput.focus();
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+            todoInput.value = '';
+            document.getElementById('deadlineDate').value = '';
+            document.getElementById('deadlineTime').value = '';
+            document.getElementById('warningMinutes').value = '';
+        });
+
+        submitBtn.addEventListener('click', () => {
+            const title = todoInput.value.trim();
+            if (title) {
+                const todo = { title };
+                
+                // 如果有設定日期和時間，建立 deadline
+                const date = document.getElementById('deadlineDate').value;
+                const time = document.getElementById('deadlineTime').value;
+                if (date && time) {
+                    todo.deadline = `${date}T${time}:00`;
+                }
+                
+                // 獲取警示分鐘數
+                const minutes = document.getElementById('warningMinutes').value;
+                if (minutes && parseInt(minutes) > 0) {
+                    todo.warningMinutes = parseInt(minutes);
+                }
+                
+                createTodoCard(todo);
+                modal.classList.remove('active');
+                
+                // 清空所有欄位
+                todoInput.value = '';
+                document.getElementById('deadlineDate').value = '';
+                document.getElementById('deadlineTime').value = '';
+                document.getElementById('warningMinutes').value = '';
+                
+                // 立即檢查警示
+                checkWarnings();
+            }
+        });
+
+        // Enter 鍵提交
+        todoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            }
+        });
+
+        // ESC 鍵取消
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (modal.classList.contains('active')) {
+                    cancelBtn.click();
+                } else if (doneModal.classList.contains('active')) {
+                    closeDoneBtn.click();
+                } else if (confirmModal.classList.contains('active')) {
+                    confirmCancelBtn.click();
+                }
+            }
+        });
+
+        // 點擊 modal 背景關閉
+        modal.addEventListener('click', (e) => {modal.addEventListener('點擊', (e) => {
+            if (e.target === modal) {
+                cancelBtn.click();
+            }
+        });
+
+        // 初始化
+        loadTodos();
+    </script>
+</body>
+</html>
